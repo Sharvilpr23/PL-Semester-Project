@@ -30,7 +30,7 @@ const ExampleView = ({ className }) => {
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!isError) {
-      sendData(JSON.stringify({ test: userName }));
+      sendData(JSON.stringify({ Name: userName }));
     }
   };
 

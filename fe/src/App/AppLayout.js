@@ -2,6 +2,7 @@ import React from "react";
 import PT from "prop-types";
 import AppMain from "./AppMain";
 import GameNav from "./GameNav";
+import GameLobby from "./GameLobby";
 
 //*****************************************************************************
 // Interface
@@ -22,13 +23,18 @@ const defaultProps = {
 const AppLayout = ({ className }) => {
   const cn = {
     root: `flex ${className}`,
-    navBar: "w-1/6 h-full bg-zinc-400",
+    sidebar: "w-1/6 h-full bg-zinc-400",
+    gamenav: "",
+    lobby: "",
     view: "w-5/6 h-full",
   };
 
   return (
     <div className={cn.root}>
-      <GameNav className={cn.navBar} />
+      <div className={cn.sidebar}>
+        <GameNav className={cn.gamenav} />
+        <GameLobby className={cn.lobby} />
+      </div>
       <AppMain className={cn.view} />
     </div>
   );
