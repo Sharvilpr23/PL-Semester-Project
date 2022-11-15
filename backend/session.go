@@ -9,8 +9,8 @@ import (
 
 type Session struct {
 	id string
+	uname string
 	connection *websocket.Conn
-	user *User
 }
 
 func (s *Session) SendMessage(str string) error{
@@ -23,34 +23,45 @@ func (s *Session) SendJSON(v interface{}) error{
 	return err
 }
 
+func (s *Session) GetUserName() string{
+	return s.uname
+}
+
 type UserDefinition struct {
 	Name string
 }
 
-func reader(s *Session){
+type UserMessage struct {
+	Name string
+	GameId int
+	GameData int
+}
+
+func (s *Session) reader(server *Server){
     for { // Listen for messages
         messageType, p, err := s.connection.ReadMessage()
         if err != nil{
             log.Println(err)
-			removeSession(server, s)
+			server.removeSession(s)
             return
         }
 
         log.Println(string(p))
 		if messageType == websocket.CloseMessage { // To gracefully close the connection, parrot message back (TCP)
 			s.connection.WriteMessage(messageType, p)
-			removeSession(server, s)
+			server.removeSession(s)
 			return
 		}
 		// Process message
-		var data UserDefinition
+		var data UserMessage
 		err = json.Unmarshal(p, &data)
 		if err != nil{
 			log.Println(err)
 		}
 
-		updateUserName(s, data.Name)
+		s.uname = data.Name
 		server.updateNames()
+		server.JoinGame(s, data.GameId)
     }
 
 }
@@ -64,11 +75,6 @@ func generateSessionId() string {
 }
 
 func startSession(conn *websocket.Conn) *Session{
-	s := Session{id: generateSessionId(), connection: conn, user: newUser() }
+	s := Session{id: generateSessionId(), connection: conn, uname: "Unknown User" }
 	return &s
-}
-
-var upgrader = websocket.Upgrader{
-    ReadBufferSize: 1024,
-    WriteBufferSize: 1024,
 }

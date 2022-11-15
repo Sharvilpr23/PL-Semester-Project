@@ -50,6 +50,12 @@ const GameLobby = ({ className }) => {
       {((data || "").split("\n") || []).map((user) => (
         <p>{user}</p>
       ))}
+
+      <button
+        onClick={() => sendData(JSON.stringify({ Name: "hello!", GameId: 1 }))}
+      >
+        Enter lobby
+      </button>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 package main
 
-var server *Server
-
 func main(){
-    StartServer(8080)
+    server := newServer(8080)
+    server.StartServer()
 }
