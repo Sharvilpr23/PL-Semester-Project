@@ -27,7 +27,7 @@ const GameNav = ({ className }) => {
   };
 
   const games = [
-    ["First Game", "/first"],
+    ["Chat room", "/first"],
     ["Second Game", "/second"],
     ["Third Game", "/third"],
   ];

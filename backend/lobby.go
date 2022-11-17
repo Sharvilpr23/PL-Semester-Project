@@ -1,13 +1,15 @@
 package main
 
-import (
-	"strings"
-	"fmt"
-)
+// import (
+// 	"strings"
+// )
+
+type SendRoomMessage func(string, string)
 
 type Lobby struct {
 	gameId int
 	lobbyId int
+	sendRoom SendRoomMessage// strategy pattern ish
 	users []*Session
 }
 
@@ -21,7 +23,15 @@ func generateLobbyId () int {
 
 func NewLobby(gameId int) *Lobby{
 	l := Lobby{gameId: gameId, lobbyId: generateLobbyId()}
-	return &l
+	lobbyAddy := &l
+	// VIOLATES OPEN/CLOSED FROM SOLID
+	if gameId == 1{
+		room := makeChatRoom(lobbyAddy)
+		lobbyAddy.sendRoom = func (uname string, body string) {
+			room.handleUserMessage(uname, body)
+		}
+	}
+	return lobbyAddy
 }
 
 func (l *Lobby) GetGameId() int {
@@ -48,7 +58,7 @@ func (l *Lobby) RemovePlayer(player *Session){
 
 func (l *Lobby) AddPlayer(player *Session){
 	l.users = append(l.users, player)
-	playersString := "{\"Players\":" + "[\"" + strings.Join(l.GetRoomUserNames(), "\",\"") + "\"]}" 
+	// playersString := "{\"Players\":" + "[\"" + strings.Join(l.GetRoomUserNames(), "\",\"") + "\"]}" 
 	// l.MessagePlayers(playersString)
 	// fmt.Println(playersString)
 }

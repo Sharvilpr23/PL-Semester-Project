@@ -3,6 +3,8 @@ import PT from "prop-types";
 import { Route, Routes } from "react-router-dom";
 import ExampleView from "../GameViews/ExampleView";
 import { useGameData } from "../DataHook/GameDataHook";
+import ChatRoom from "../GameViews/ChatRoom";
+import ConnectionProvider from "./AppContext";
 
 //*****************************************************************************
 // Interface
@@ -28,7 +30,7 @@ const AppMain = ({ className }) => {
   return (
     <div className={cn.root}>
       <Routes>
-        <Route exact path="/first" element={<ExampleView />} />
+        <Route exact path="/first" element={<ChatRoom />} />
         <Route exact path="/second" element={<ExampleView />} />
         <Route exact path="/third" element={<ExampleView />} />
       </Routes>

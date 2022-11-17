@@ -80,6 +80,8 @@ func (s *Server) JoinGame(player *Session, gameId int){
 	for _, lobby := range s.lobbies {
 		if lobby.GetGameId() == gameId && lobby.HasRoom() {
 			lobby.AddPlayer(player)
+			log.Println("Added player " + player.uname + " to existing lobby")
+			player.SetLobby(lobby)
 			return
 		}
 	}
@@ -89,4 +91,7 @@ func (s *Server) JoinGame(player *Session, gameId int){
 	newLobby := NewLobby(gameId)
 	s.lobbies = append(s.lobbies, newLobby)
 	newLobby.AddPlayer(player)
+	log.Println("Added player " + player.uname + " to new lobby")
+
+	player.SetLobby(newLobby)
 }

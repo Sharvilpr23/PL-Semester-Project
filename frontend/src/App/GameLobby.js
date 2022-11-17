@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "react-query";
 import PT from "prop-types";
 import { useGameData } from "../DataHook/GameDataHook";
+import { useConnectionContext } from "./AppContext";
 
 //*****************************************************************************
 // Interface
@@ -24,7 +25,14 @@ const GameLobby = ({ className }) => {
     root: ` ${className}`,
   };
   const [userName, setUserName] = useState("Anonymous");
-  const { data, isOpen, isError, error, sendData } = useGameData("server");
+  const [users, setUsers] = useState("");
+  const { data, isOpen, isError, error, sendData } = useConnectionContext();
+
+  useEffect(() => {
+    if (typeof data === "string") {
+      setUsers(data.split("\n"));
+    }
+  }, [data, setUsers]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -47,15 +55,9 @@ const GameLobby = ({ className }) => {
           />
         </label>
       </form>
-      {((data || "").split("\n") || []).map((user) => (
-        <p>{user}</p>
+      {(users || []).map((user, idx) => (
+        <p key={idx}>{user}</p>
       ))}
-
-      <button
-        onClick={() => sendData(JSON.stringify({ Name: "hello!", GameId: 1 }))}
-      >
-        Enter lobby
-      </button>
     </div>
   );
 };

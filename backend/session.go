@@ -10,12 +10,17 @@ import (
 type Session struct {
 	id string
 	uname string
+	lobby *Lobby
 	connection *websocket.Conn
 }
 
 func (s *Session) SendMessage(str string) error{
 	err := s.connection.WriteMessage(websocket.TextMessage, []byte(str))
 	return err
+}
+
+func (s *Session) SetLobby(lobby *Lobby) {
+	s.lobby = lobby
 }
 
 func (s *Session) SendJSON(v interface{}) error{
@@ -27,14 +32,10 @@ func (s *Session) GetUserName() string{
 	return s.uname
 }
 
-type UserDefinition struct {
-	Name string
-}
-
 type UserMessage struct {
 	Name string
 	GameId int
-	GameData int
+	GameData string
 }
 
 func (s *Session) reader(server *Server){
@@ -56,12 +57,31 @@ func (s *Session) reader(server *Server){
 		var data UserMessage
 		err = json.Unmarshal(p, &data)
 		if err != nil{
+			log.Println("Errror unmarshalling data")
 			log.Println(err)
 		}
 
-		s.uname = data.Name
-		server.updateNames()
-		server.JoinGame(s, data.GameId)
+		log.Println("Checking user name...")
+		if data.Name != "" && s.uname != data.Name{
+			log.Println("Setting user name")
+			s.uname = data.Name
+			server.updateNames()
+		}
+
+		// Ran into issue with "(mismatched types <dt> and untyped nil"
+		// and frankly I'm disturbed 
+		// if data.GameId != nil && data.GameId != s.lobby.GetGameId(){
+		log.Println("Checking game id...")
+		if data.GameId != 0 && (s.lobby == nil || data.GameId != s.lobby.GetGameId()){
+			log.Println("Joining game")
+			server.JoinGame(s, data.GameId)
+		}
+		
+		log.Println("Checking game data...")
+		if data.GameData != ""{
+			log.Println("Sending lobby data")
+			s.lobby.sendRoom(s.uname, data.GameData)
+		}
     }
 
 }
