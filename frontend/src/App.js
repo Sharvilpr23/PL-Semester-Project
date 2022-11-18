@@ -9,7 +9,7 @@ function App() {
     <BrowserRouter>
       <ConnectionProvider>
         <QueryClientProvider client={new QueryClient()}>
-          <AppLayout className="h-screen w-screen" />
+          <AppLayout />
         </QueryClientProvider>
       </ConnectionProvider>
     </BrowserRouter>

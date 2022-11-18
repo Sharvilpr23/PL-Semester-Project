@@ -22,11 +22,11 @@ const defaultProps = {
 
 const AppLayout = ({ className }) => {
   const cn = {
-    root: `flex ${className}`,
+    root: `flex min-h-0 h-screen w-screen ${className}`,
     sidebar: "w-1/6 h-full bg-zinc-400",
     gamenav: "",
     lobby: "",
-    view: "w-5/6 h-full",
+    view: "w-5/6 h-full min-h-0",
   };
 
   return (

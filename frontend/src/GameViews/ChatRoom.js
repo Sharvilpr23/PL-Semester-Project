@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import PT from "prop-types";
 import { useConnectionContext } from "../App/AppContext";
 import { isNotNil, isNotNilOrEmpty } from "ramda-adjunct";
@@ -25,6 +25,8 @@ const ChatRoom = ({ className }) => {
   const { data, isOpen, isError, sendData, clientId } = useConnectionContext();
   const [messages, setMessages] = useState([]);
   const [maxUsers, setMaxUsers] = useState(undefined);
+  const [scrolled, setScrolled] = useState(false);
+  const scroller = useRef();
   const [currentUsers, setCurrentUsers] = useState([]);
 
   useEffect(() => {
@@ -41,6 +43,15 @@ const ChatRoom = ({ className }) => {
   }, [data, setMessages, setMaxUsers, setCurrentUsers]);
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      if (!scrolled) {
+        scroller.current.scrollTop =
+          scroller.current.scrollHeight - scroller.current.offsetHeight;
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [scroller, scrolled]);
+  useEffect(() => {
     if (isOpen) {
       sendData(JSON.stringify({ Name: "", GameId: 1, GameData: "" }));
     }
@@ -52,30 +63,52 @@ const ChatRoom = ({ className }) => {
     sendData(JSON.stringify({ Name: "", GameId: 0, GameData: message }));
   };
 
-  const messageBase = "w-3/4 border-2 border-slate-900 px-2 rounded-md mx-2";
+  const messageBase =
+    "w-3/4 border-2 border-slate-900 px-2 rounded-md mx-2 my-2";
   const cn = {
-    root: `flex gap-8 h-full ${className}`,
+    root: `flex gap-8 max-h-full h-full min-h-0 ${className}`,
     input: "bg-slate-100",
-    messages: "flex flex-col gap-2 justify-end bg-zinc-700 h-3/4 w-1/2",
+    leftColumn: "h-3/4 w-1/2 min-h-0",
+    messages: "relative flex flex-col-reverse bg-zinc-700 w-full h-full",
+    trueMessages: "absolute overflow-y-auto inset-0",
     message: `${messageBase} bg-slate-200`,
     myMessage: `${messageBase} ml-auto bg-green-300`,
-    lobbyDisplay: "bg-zinc-200 grow p-4",
+    lobbyDisplay: "bg-zinc-200 h-fit grow p-4",
+  };
+
+  const handleScroll = () => {
+    setScrolled(true);
+    if (
+      scroller.current.scrollTop ===
+      scroller.current.scrollHeight - scroller.current.offsetHeight
+    ) {
+      // they scrolled back to the bottom, reattach
+      setScrolled(false);
+    }
   };
 
   return (
     <div className={cn.root}>
-      <div className={cn.messages}>
-        {(messages || []).map((message, idx) => (
-          <MessageInstance
-            key={idx}
-            SenderName={message?.SenderName}
-            Timestamp={message?.Timestamp}
-            Body={message?.Body}
-            className={
-              message?.SenderId === clientId ? cn.myMessage : cn.message
-            }
-          />
-        ))}
+      <div className={cn.leftColumn}>
+        <div className={cn.messages}>
+          <div
+            ref={scroller}
+            onScroll={(e) => handleScroll(e)}
+            className={cn.trueMessages}
+          >
+            {(messages || []).map((message, idx) => (
+              <MessageInstance
+                key={idx}
+                SenderName={message?.SenderName}
+                Timestamp={message?.Timestamp}
+                Body={message?.Body}
+                className={
+                  message?.SenderId === clientId ? cn.myMessage : cn.message
+                }
+              />
+            ))}
+          </div>
+        </div>
         <UserInput
           className={cn.input}
           onSubmit={handleSubmit}
