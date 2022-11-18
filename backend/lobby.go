@@ -3,13 +3,16 @@ package main
 // import (
 // 	"strings"
 // )
-
-type SendRoomMessage func(string, string)
+type OnUserCallback func(*Session)
+type OnUserCallbackWithString func(*Session, string)
 
 type Lobby struct {
 	gameId int
 	lobbyId int
-	sendRoom SendRoomMessage// strategy pattern ish
+	maxUsers int
+	sendRoom OnUserCallbackWithString
+	onUserJoin OnUserCallback
+	onUserLeave OnUserCallback
 	users []*Session
 }
 
@@ -24,13 +27,21 @@ func generateLobbyId () int {
 func NewLobby(gameId int) *Lobby{
 	l := Lobby{gameId: gameId, lobbyId: generateLobbyId()}
 	lobbyAddy := &l
-	// VIOLATES OPEN/CLOSED FROM SOLID
-	if gameId == 1{
-		room := makeChatRoom(lobbyAddy)
-		lobbyAddy.sendRoom = func (uname string, body string) {
-			room.handleUserMessage(uname, body)
-		}
+	var room GameInterface // pretty bad since there's no proper inheritence but every game will follow proper standards that I will need to write down
+	if gameId == CHATROOM_GAME_ID{
+		room = makeChatRoom(lobbyAddy)
 	}
+
+	lobbyAddy.sendRoom = func (player *Session, body string) {
+		room.onUserMessage(player, body)
+	}
+	lobbyAddy.onUserJoin = func (player *Session) {
+		room.onUserJoin(player)
+	}
+	lobbyAddy.onUserLeave = func (player *Session) {
+		room.onUserLeave(player)
+	}
+	l.maxUsers = room.getMaxUsers()
 	return lobbyAddy
 }
 
@@ -39,7 +50,11 @@ func (l *Lobby) GetGameId() int {
 }
 
 func (l *Lobby) HasRoom() bool {
-	return len(l.users) < 2
+	return len(l.users) < l.maxUsers
+}
+
+func (l *Lobby) IsEmpty() bool {
+	return len(l.users) == 0
 }
 
 func (l *Lobby) RemovePlayer(player *Session){
@@ -53,23 +68,17 @@ func (l *Lobby) RemovePlayer(player *Session){
 	if toRemove != -1{ // Standard remove index i from slice
 		l.users[toRemove] = l.users[len(l.users) - 1]
 		l.users = l.users[:len(l.users) - 1]
+		l.onUserLeave(player)
 	}
 }
 
 func (l *Lobby) AddPlayer(player *Session){
 	l.users = append(l.users, player)
-	// playersString := "{\"Players\":" + "[\"" + strings.Join(l.GetRoomUserNames(), "\",\"") + "\"]}" 
-	// l.MessagePlayers(playersString)
-	// fmt.Println(playersString)
+	l.onUserJoin(player)
 }
 
-func (l *Lobby) GetRoomUserNames() []string{
-	names := []string{}
-	for _, user:= range l.users {
-		names = append(names, user.GetUserName())
-	}
-
-	return names
+func (l *Lobby) GetRoomUsers() []*Session{
+	return l.users
 }
 
 func (l *Lobby) MessagePlayers(message string){

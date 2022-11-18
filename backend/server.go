@@ -4,13 +4,13 @@ import (
 	"fmt"
     "log"
 	"net/http"
-	"strings"
+	"encoding/json"
     "github.com/gorilla/websocket"
 )
 
 type Server struct {
     port int
-	sessions []*Session
+	Sessions []*Session
 	lobbies []*Lobby
 }
 
@@ -30,40 +30,43 @@ func (s *Server) setupRoutes() {
 func (s *Server) addSession(conn *websocket.Conn) {
     log.Println("Client Successfully Connected...")
 	newSession := startSession(conn)
-	s.sessions = append(s.sessions, newSession)
+	s.Sessions = append(s.Sessions, newSession)
 	s.updateNames()
 	newSession.reader(s)
 }
 
-func (s *Server) removeSession(session *Session){
-	for i, element := range s.sessions {
-		if element.id == session.id {
-			s.sessions[i] = s.sessions[len(s.sessions) - 1]
-			s.sessions = s.sessions[:len(s.sessions) - 1]
-			return
+func (s *Server) removeFromLobby(session *Session){
+	for i, lobby := range s.lobbies {
+		lobby.RemovePlayer(session);
+
+		if lobby.IsEmpty() { // If lobby now empty, remove it
+			s.lobbies[i] = s.lobbies[len(s.lobbies) - 1]
+			s.lobbies = s.lobbies[:len(s.lobbies) - 1]
 		}
 	}
 }
 
-func (s *Server) updateNames() {
-	var names []string
-	for _, userSession := range s.sessions {
-		names = append(names, userSession.GetUserName())
+func (s *Server) removeSession(session *Session){
+	s.removeFromLobby(session)
+
+	for i, element := range s.Sessions {
+		if element.Id == session.Id {
+			s.Sessions[i] = s.Sessions[len(s.Sessions) - 1]
+			s.Sessions = s.Sessions[:len(s.Sessions) - 1]
+			return
+		}
 	}
-	for _, element := range s.sessions {
-		element.SendMessage(strings.Join(names, "\n"))
-	}
-	fmt.Println(strings.Join(names, "\n"))
+
+	s.updateNames()
 }
 
-func (s *Server) getServerUsers () string{
-	stringBuilder := ""
-	for _, element := range s.sessions {
-		stringBuilder = stringBuilder + "SID: " + element.id + "\t Name: " + element.GetUserName() + "\n"
-	// 	stringBuilder = stringBuilder + ", " + element.user.name
+func (s *Server) updateNames() {
+	out, _ := json.Marshal(s) // {"Sessions": [{<id, name>}]}
+	fmt.Println(string(out))
+	for _, element := range s.Sessions{
+		element.SendMessage(string(out))
 	}
-	// stringBuilder = append(stringBuilder, "]")
-	return stringBuilder
+	fmt.Println(string(out))
 }
 
 func (s *Server) StartServer() {
@@ -80,7 +83,7 @@ func (s *Server) JoinGame(player *Session, gameId int){
 	for _, lobby := range s.lobbies {
 		if lobby.GetGameId() == gameId && lobby.HasRoom() {
 			lobby.AddPlayer(player)
-			log.Println("Added player " + player.uname + " to existing lobby")
+			log.Println("Added player " + player.GetUserName() + " to existing lobby")
 			player.SetLobby(lobby)
 			return
 		}
@@ -91,7 +94,7 @@ func (s *Server) JoinGame(player *Session, gameId int){
 	newLobby := NewLobby(gameId)
 	s.lobbies = append(s.lobbies, newLobby)
 	newLobby.AddPlayer(player)
-	log.Println("Added player " + player.uname + " to new lobby")
+	log.Println("Added player " + player.GetUserName() + " to new lobby")
 
 	player.SetLobby(newLobby)
 }

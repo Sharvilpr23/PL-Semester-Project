@@ -2,9 +2,7 @@ import React from "react";
 import PT from "prop-types";
 import { Route, Routes } from "react-router-dom";
 import ExampleView from "../GameViews/ExampleView";
-import { useGameData } from "../DataHook/GameDataHook";
 import ChatRoom from "../GameViews/ChatRoom";
-import ConnectionProvider from "./AppContext";
 
 //*****************************************************************************
 // Interface
@@ -24,7 +22,7 @@ const defaultProps = {
 
 const AppMain = ({ className }) => {
   const cn = {
-    root: ` ${className}`,
+    root: `px-4 py-8 ${className}`,
   };
 
   return (

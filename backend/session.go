@@ -2,14 +2,13 @@ package main
 
 import (
 	"log"
-	"fmt"
     "github.com/gorilla/websocket"
 	"encoding/json"
 )
 
 type Session struct {
-	id string
-	uname string
+	Id int
+	UserName string
 	lobby *Lobby
 	connection *websocket.Conn
 }
@@ -29,7 +28,11 @@ func (s *Session) SendJSON(v interface{}) error{
 }
 
 func (s *Session) GetUserName() string{
-	return s.uname
+	return s.UserName
+}
+
+func (s *Session) GetUserId() int{
+	return s.Id
 }
 
 type UserMessage struct {
@@ -61,26 +64,25 @@ func (s *Session) reader(server *Server){
 			log.Println(err)
 		}
 
-		log.Println("Checking user name...")
-		if data.Name != "" && s.uname != data.Name{
+		if data.Name != "" && s.UserName != data.Name{
 			log.Println("Setting user name")
-			s.uname = data.Name
+			s.UserName = data.Name
 			server.updateNames()
 		}
 
 		// Ran into issue with "(mismatched types <dt> and untyped nil"
 		// and frankly I'm disturbed 
-		// if data.GameId != nil && data.GameId != s.lobby.GetGameId(){
-		log.Println("Checking game id...")
 		if data.GameId != 0 && (s.lobby == nil || data.GameId != s.lobby.GetGameId()){
+			if(s.lobby != nil && s.lobby.GetGameId() != data.GameId){ // changing games... or potentially just adding a new one but it should be safe regardless
+				s.lobby.RemovePlayer(s)
+			}
 			log.Println("Joining game")
 			server.JoinGame(s, data.GameId)
 		}
 		
-		log.Println("Checking game data...")
 		if data.GameData != ""{
 			log.Println("Sending lobby data")
-			s.lobby.sendRoom(s.uname, data.GameData)
+			s.lobby.sendRoom(s, data.GameData)
 		}
     }
 
@@ -88,13 +90,20 @@ func (s *Session) reader(server *Server){
 
 var nextSessionId = 1
 
-func generateSessionId() string {
+func generateSessionId() int {
 	sid := nextSessionId
 	nextSessionId++
-	return fmt.Sprintf("%d", sid);
+	return sid;
+}
+
+type SessionStartMessage struct {
+	YourId int
 }
 
 func startSession(conn *websocket.Conn) *Session{
-	s := Session{id: generateSessionId(), connection: conn, uname: "Unknown User" }
-	return &s
+	s := &(Session{Id: generateSessionId(), connection: conn, UserName: "Anonymous" })
+	m := SessionStartMessage{YourId: s.Id}
+	out, _ := json.Marshal(m)
+	s.SendMessage(string(out))
+	return s
 }

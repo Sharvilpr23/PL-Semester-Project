@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useQuery } from "react-query";
 import PT from "prop-types";
-import { useGameData } from "../DataHook/GameDataHook";
 import { useConnectionContext } from "./AppContext";
+import { isNotNilOrEmpty } from "ramda-adjunct";
 
 //*****************************************************************************
 // Interface
@@ -20,17 +19,21 @@ const defaultProps = {
 // Components
 //*****************************************************************************
 
-const GameLobby = ({ className }) => {
+const ServerLobby = ({ className }) => {
+  const userListingBase = "border-2 px-2";
   const cn = {
     root: ` ${className}`,
+    users: "flex flex-col gap-2",
+    userListing: userListingBase,
+    myUser: `${userListingBase} border-green-200`,
   };
   const [userName, setUserName] = useState("Anonymous");
   const [users, setUsers] = useState("");
-  const { data, isOpen, isError, error, sendData } = useConnectionContext();
+  const { data, isOpen, isError, sendData, clientId } = useConnectionContext();
 
   useEffect(() => {
-    if (typeof data === "string") {
-      setUsers(data.split("\n"));
+    if (isNotNilOrEmpty(data?.Sessions)) {
+      setUsers(data?.Sessions);
     }
   }, [data, setUsers]);
 
@@ -56,12 +59,23 @@ const GameLobby = ({ className }) => {
         </label>
       </form>
       {(users || []).map((user, idx) => (
-        <p key={idx}>{user}</p>
+        <UserListing
+          className={user?.Id === clientId ? cn.myUser : cn.userListing}
+          user={user?.UserName}
+          key={idx}
+        />
       ))}
     </div>
   );
 };
 
-GameLobby.propTypes = propTypes;
-GameLobby.defaultProps = defaultProps;
-export default GameLobby;
+const UserListing = ({ user, className }) => {
+  const cn = {
+    root: ` ${className}`,
+  };
+  return <div className={cn.root}>{user}</div>;
+};
+
+ServerLobby.propTypes = propTypes;
+ServerLobby.defaultProps = defaultProps;
+export default ServerLobby;

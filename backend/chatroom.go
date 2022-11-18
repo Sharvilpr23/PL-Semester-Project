@@ -2,53 +2,58 @@ package main
 
 import (
 	"time"
+	"encoding/json"
 )
 
-type Message struct {
-	timestamp string // there's an actual timestamp data type, but I don't have the time to learn how to work with it
-	senderName string
-	body string
+var CHATROOM_GAME_ID = 1
+
+type Message struct { // Since it is being serialized to be sent over, the members a public (capitolized)
+	Timestamp string // there's an actual timestamp data type, but I don't have the time to learn how to work with it
+	SenderName string
+	SenderId int
+	Body string
 }
 
-func (m *Message) JSONStringify() string {
-	var stringBuilder = "{"
-	stringBuilder += "\"name\": \"" + m.senderName + "\", "
-	stringBuilder += "\"time\": \"" + m.timestamp + "\", "
-	stringBuilder += "\"body\": \"" + m.body + "\""
-	stringBuilder += "}"
-	return stringBuilder
-}
-
-func newMessage(senderName string, body string) *Message{
+func newMessage(senderName string, senderId int, body string) *Message{
 	dt := time.Now()
 							 // I dislike go. Why would they format datetime like this? Why not use specifiers? ?? ? 
 	strTime := dt.Format("3:04PM") // https://zetcode.com/golang/datetime-format/ 
-	m := Message{timestamp: strTime, senderName: senderName, body: body}
+	m := Message{Timestamp: strTime, SenderName: senderName, SenderId: senderId, Body: body}
 	return &m
 }
 
 
-type Chatroom struct {
-	messages []*Message
+type Chatroom struct { // messages public to serialize them, makes it like {"Messages": [{"Timestamp": '', "SenderName": '', "Body": ""}]}
+	Messages []*Message
+	CurrentUsers []*Session // Not properly kept track of, just updated on the user callbacks so that the front end can display who all is in the room
 	lobby *Lobby
+	MaxUsers int
+}
+
+func (r *Chatroom) getMaxUsers() int {
+	return r.MaxUsers
 }
 
 func makeChatRoom(lobby *Lobby) *Chatroom{ // unnecesary constructor
-	room := Chatroom{lobby: lobby}
+	var maxUsers = 10
+	room := Chatroom{lobby: lobby, MaxUsers: maxUsers}
 	return &room
 }
 
-func (room *Chatroom) handleUserMessage (uname string, data string) {
-	message := newMessage(uname, data)
-	room.messages = append(room.messages, message)
+func (room *Chatroom) onUserJoin(user *Session){
+	room.CurrentUsers = room.lobby.GetRoomUsers()
+	room.onUserMessage(user, "Joined")
+}
 
+func (room *Chatroom) onUserLeave(user *Session){
+	room.CurrentUsers = room.lobby.GetRoomUsers()
+	room.onUserMessage(user, "Left")
+}
 
-	var strBuilder = "{\"messages\": ["
-	for _, message := range room.messages {
-		strBuilder += message.JSONStringify() + ","
-	}
-	strBuilder = strBuilder[:len(strBuilder) - 1] // delete the comma
-												  // note this would likely break if there were no messages in the list, however we are guarunteed one!
-	strBuilder += "]}"
-	room.lobby.MessagePlayers(strBuilder)
+func (room *Chatroom) onUserMessage (user *Session, data string) {
+	message := newMessage(user.GetUserName(), user.GetUserId(), data)
+	room.Messages = append(room.Messages, message)
+
+	out, _ := json.Marshal(room)
+	room.lobby.MessagePlayers(string(out))
 }

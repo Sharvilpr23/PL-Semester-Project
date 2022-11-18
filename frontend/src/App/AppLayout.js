@@ -2,7 +2,7 @@ import React from "react";
 import PT from "prop-types";
 import AppMain from "./AppMain";
 import GameNav from "./GameNav";
-import GameLobby from "./GameLobby";
+import ServerLobby from "./GameLobby";
 
 //*****************************************************************************
 // Interface
@@ -33,7 +33,7 @@ const AppLayout = ({ className }) => {
     <div className={cn.root}>
       <div className={cn.sidebar}>
         <GameNav className={cn.gamenav} />
-        <GameLobby className={cn.lobby} />
+        <ServerLobby className={cn.lobby} />
       </div>
       <AppMain className={cn.view} />
     </div>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import PT from "prop-types";
-import { useGameData } from "../DataHook/GameDataHook";
 import { useConnectionContext } from "../App/AppContext";
-import { isNotNilOrEmpty } from "ramda-adjunct";
+import { isNotNil, isNotNilOrEmpty } from "ramda-adjunct";
+import LobbyDisplay from "../Components/LobbyDisplay";
+import UserInput from "../Components/UserInput";
 
 //*****************************************************************************
 // Interface
@@ -21,16 +22,23 @@ const defaultProps = {
 //*****************************************************************************
 
 const ChatRoom = ({ className }) => {
-  const { data, isOpen, isError, error, sendData } = useConnectionContext();
-  const [message, setMessage] = useState("");
+  const { data, isOpen, isError, sendData, clientId } = useConnectionContext();
   const [messages, setMessages] = useState([]);
+  const [maxUsers, setMaxUsers] = useState(undefined);
+  const [currentUsers, setCurrentUsers] = useState([]);
 
   useEffect(() => {
     // Hack because I really do not want to go through the effort of making another lobby endpoint and dealing with all of that nonsense
-    if (isNotNilOrEmpty(data?.messages)) {
-      setMessages(data?.messages);
+    if (isNotNilOrEmpty(data?.Messages)) {
+      setMessages(data?.Messages);
     }
-  }, [data, setMessages]);
+    if (isNotNilOrEmpty(data?.CurrentUsers)) {
+      setCurrentUsers(data?.CurrentUsers);
+    }
+    if (isNotNil(data?.MaxUsers)) {
+      setMaxUsers(data?.MaxUsers);
+    }
+  }, [data, setMessages, setMaxUsers, setCurrentUsers]);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,40 +46,66 @@ const ChatRoom = ({ className }) => {
     }
   }, [sendData, isOpen]);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const handleSubmit = (message) => {
     if (!isOpen || isError) return;
 
-    // Name: "" and GameId: 0 to indicate to reader that those aren't meant to be updated.
-    // Ideally client would know client id and send a message to a lobby endpoint that
-    // states the client id, but I am very short on time and this was quick to hack together.
-    // That said it is a hack and I apologize.
     sendData(JSON.stringify({ Name: "", GameId: 0, GameData: message }));
   };
 
+  const messageBase = "w-3/4 border-2 border-slate-900 px-2 rounded-md mx-2";
   const cn = {
-    root: ` ${className}`,
+    root: `flex gap-8 h-full ${className}`,
+    input: "bg-slate-100",
+    messages: "flex flex-col gap-2 justify-end bg-zinc-700 h-3/4 w-1/2",
+    message: `${messageBase} bg-slate-200`,
+    myMessage: `${messageBase} ml-auto bg-green-300`,
+    lobbyDisplay: "bg-zinc-200 grow p-4",
   };
 
   return (
     <div className={cn.root}>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Message:
-          <input
-            onChange={({ target }) => setMessage(target.value)}
-            type="text"
-            name="name"
-            className="border-2"
-            // value={message}
+      <div className={cn.messages}>
+        {(messages || []).map((message, idx) => (
+          <MessageInstance
+            key={idx}
+            SenderName={message?.SenderName}
+            Timestamp={message?.Timestamp}
+            Body={message?.Body}
+            className={
+              message?.SenderId === clientId ? cn.myMessage : cn.message
+            }
           />
-        </label>
-      </form>
-      {(messages || []).map((message, idx) => (
-        <p
-          key={idx}
-        >{`From: ${message?.name} | At: ${message?.time} => ${message?.body}`}</p>
-      ))}
+        ))}
+        <UserInput
+          className={cn.input}
+          onSubmit={handleSubmit}
+          label="Message: "
+          placeholder="..."
+          clearOnSubmit={true}
+        />
+      </div>
+      <LobbyDisplay
+        maxUsers={maxUsers}
+        currentUsers={currentUsers}
+        className={cn.lobbyDisplay}
+      />
+    </div>
+  );
+};
+
+const MessageInstance = ({ SenderName, Timestamp, Body, className }) => {
+  const cn = {
+    root: `flex ${className}`,
+    sender: "w-1/6",
+    ts: "w-1/6",
+    body: "grow",
+  };
+
+  return (
+    <div className={cn.root}>
+      <div className={cn.sender}>{SenderName}</div>
+      <div className={cn.ts}>{Timestamp}</div>
+      <div className={cn.body}>{Body}</div>
     </div>
   );
 };
