@@ -3,6 +3,7 @@ import PT from "prop-types";
 import { Route, Routes } from "react-router-dom";
 import ExampleView from "../GameViews/ExampleView";
 import ChatRoom from "../GameViews/ChatRoom";
+import Home from "../GameViews/Home";
 
 //*****************************************************************************
 // Interface
@@ -28,6 +29,7 @@ const AppMain = ({ className }) => {
   return (
     <div className={cn.root}>
       <Routes>
+        <Route exact path="/" element={<Home />} />
         <Route exact path="/first" element={<ChatRoom />} />
         <Route exact path="/second" element={<ExampleView />} />
         <Route exact path="/third" element={<ExampleView />} />

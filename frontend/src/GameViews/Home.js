@@ -17,14 +17,14 @@ const defaultProps = {
 // Components
 //*****************************************************************************
 
-const ExampleView = ({ className }) => {
+const Home = ({ className }) => {
   const cn = {
-    root: `text-4xl h-full w-full bg-red-800 text-purple ${className}`,
+    root: `text-4xl ${className}`,
   };
 
-  return <div className={cn.root}>YOUR GAME HERE</div>;
+  return <div className={cn.root}>Welcome to our Go Project</div>;
 };
 
-ExampleView.propTypes = propTypes;
-ExampleView.defaultProps = defaultProps;
-export default ExampleView;
+Home.propTypes = propTypes;
+Home.defaultProps = defaultProps;
+export default Home;

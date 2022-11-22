@@ -1,8 +1,5 @@
 package main
 
-// import (
-// 	"strings"
-// )
 type OnUserCallback func(*Session)
 type OnUserCallbackWithString func(*Session, string)
 

@@ -1,6 +1,7 @@
 import React from "react";
 import PT from "prop-types";
 import NavButton from "../Components/NavButton";
+import { Link, useLocation } from "react-router-dom";
 
 //*****************************************************************************
 // Interface
@@ -19,28 +20,34 @@ const defaultProps = {
 //*****************************************************************************
 
 const GameNav = ({ className }) => {
+  const { pathname } = useLocation();
+
+  const linkBase = "p-2 rounded-l-md";
   const cn = {
     root: `py-4 ${className}`,
     title: "ml-4 text-4xl",
-    gameLink: "p-2 bg-zinc-500",
+    gameLink: `${linkBase} zinc-500`,
+    currentLink: `${linkBase} bg-blue-200 text-black`,
     games: "mt-4 flex flex-col gap-2 ml-8",
   };
 
   const games = [
-    ["Chat room", "/first"],
+    ["Chat Room", "/first"],
     ["Second Game", "/second"],
     ["Third Game", "/third"],
   ];
 
   return (
     <div className={cn.root}>
-      <div className={cn.title}>Games</div>
+      <Link className={cn.title} to="/">
+        Games
+      </Link>
       <div className={cn.games}>
         {games.map((game, idx) => {
           return (
             <NavButton
               key={idx}
-              className={cn.gameLink}
+              className={pathname === game[1] ? cn.currentLink : cn.gameLink}
               linkto={game[1]}
               text={game[0]}
             />
