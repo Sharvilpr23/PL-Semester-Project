@@ -2,7 +2,8 @@ import React from "react";
 import PT from "prop-types";
 import { Route, Routes } from "react-router-dom";
 import ExampleView from "../GameViews/ExampleView";
-import { useGameData } from "../DataHook/GameDataHook";
+import ChatRoom from "../GameViews/ChatRoom";
+import Home from "../GameViews/Home";
 
 //*****************************************************************************
 // Interface
@@ -22,13 +23,14 @@ const defaultProps = {
 
 const AppMain = ({ className }) => {
   const cn = {
-    root: ` ${className}`,
+    root: `px-4 py-8 ${className}`,
   };
 
   return (
     <div className={cn.root}>
       <Routes>
-        <Route exact path="/first" element={<ExampleView />} />
+        <Route exact path="/" element={<Home />} />
+        <Route exact path="/first" element={<ChatRoom />} />
         <Route exact path="/second" element={<ExampleView />} />
         <Route exact path="/third" element={<ExampleView />} />
       </Routes>

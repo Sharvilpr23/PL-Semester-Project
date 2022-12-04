@@ -2,15 +2,15 @@ package main
 
 import (
 	"log"
-	"fmt"
     "github.com/gorilla/websocket"
 	"encoding/json"
 )
 
 type Session struct {
-	id string
+	Id int
+	UserName string
+	lobby *Lobby
 	connection *websocket.Conn
-	user *User
 }
 
 func (s *Session) SendMessage(str string) error{
@@ -18,57 +18,92 @@ func (s *Session) SendMessage(str string) error{
 	return err
 }
 
+func (s *Session) SetLobby(lobby *Lobby) {
+	s.lobby = lobby
+}
+
 func (s *Session) SendJSON(v interface{}) error{
 	err := s.connection.WriteJSON(v);
 	return err
 }
 
-type UserDefinition struct {
-	Name string
+func (s *Session) GetUserName() string{
+	return s.UserName
 }
 
-func reader(s *Session){
+func (s *Session) GetUserId() int{
+	return s.Id
+}
+
+type UserMessage struct {
+	Name string
+	GameId int
+	GameData string
+}
+
+func (s *Session) reader(server *Server){
     for { // Listen for messages
         messageType, p, err := s.connection.ReadMessage()
         if err != nil{
             log.Println(err)
-			removeSession(server, s)
+			server.removeSession(s)
             return
         }
 
         log.Println(string(p))
 		if messageType == websocket.CloseMessage { // To gracefully close the connection, parrot message back (TCP)
 			s.connection.WriteMessage(messageType, p)
-			removeSession(server, s)
+			server.removeSession(s)
 			return
 		}
 		// Process message
-		var data UserDefinition
+		var data UserMessage
 		err = json.Unmarshal(p, &data)
 		if err != nil{
+			log.Println("Errror unmarshalling data")
 			log.Println(err)
 		}
 
-		updateUserName(s, data.Name)
-		server.updateNames()
+		if data.Name != "" && s.UserName != data.Name{
+			log.Println("Setting user name")
+			s.UserName = data.Name
+			server.updateNames()
+		}
+
+		// Ran into issue with "(mismatched types <dt> and untyped nil"
+		// and frankly I'm disturbed 
+		if data.GameId != 0 && (s.lobby == nil || data.GameId != s.lobby.GetGameId()){
+			if(s.lobby != nil && s.lobby.GetGameId() != data.GameId){ // changing games... or potentially just adding a new one but it should be safe regardless
+				s.lobby.RemovePlayer(s)
+			}
+			log.Println("Joining game")
+			server.JoinGame(s, data.GameId)
+		}
+		
+		if data.GameData != ""{
+			log.Println("Sending lobby data")
+			s.lobby.sendRoom(s, data.GameData)
+		}
     }
 
 }
 
 var nextSessionId = 1
 
-func generateSessionId() string {
+func generateSessionId() int {
 	sid := nextSessionId
 	nextSessionId++
-	return fmt.Sprintf("%d", sid);
+	return sid;
+}
+
+type SessionStartMessage struct {
+	YourId int
 }
 
 func startSession(conn *websocket.Conn) *Session{
-	s := Session{id: generateSessionId(), connection: conn, user: newUser() }
-	return &s
-}
-
-var upgrader = websocket.Upgrader{
-    ReadBufferSize: 1024,
-    WriteBufferSize: 1024,
+	s := &(Session{Id: generateSessionId(), connection: conn, UserName: "Anonymous" })
+	m := SessionStartMessage{YourId: s.Id}
+	out, _ := json.Marshal(m)
+	s.SendMessage(string(out))
+	return s
 }
