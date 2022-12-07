@@ -85,6 +85,7 @@ func (s *Session) reader(server *Server){
 			if(s.lobby != nil && s.lobby.GetGameId() != data.GameId){ // changing games... or potentially just adding a new one but it should be safe regardless
 				s.lobby.RemovePlayer(s)
 			}
+			server.removeFromLobby(s)
 			log.Println("Joining game")
 			server.JoinGame(s, data.GameId)
 		}

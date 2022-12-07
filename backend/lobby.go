@@ -1,5 +1,9 @@
 package main
 
+import (
+	"sync"
+)
+
 type OnUserCallback func(*Session)
 type OnUserCallbackWithString func(*Session, string)
 
@@ -7,6 +11,7 @@ type Lobby struct {
 	gameId int
 	lobbyId int
 	maxUsers int
+	mutex sync.Mutex
 	sendRoom OnUserCallbackWithString
 	onUserJoin OnUserCallback
 	onUserLeave OnUserCallback
@@ -33,6 +38,9 @@ func NewLobby(gameId int) *Lobby{
 	var room GameInterface // interesting since there's no proper inheritence but every game will follow proper standards that I will need to write down
 	if gameId == CHATROOM_GAME_ID{
 		room = makeChatRoom(lobbyAddy)
+	}
+	if gameId == SPACE_ROCKS_GAME_ID {
+		room = makeSpaceRocks(lobbyAddy)
 	}
 
 	lobbyAddy.sendRoom = func (player *Session, body string) {
@@ -100,6 +108,8 @@ func (l *Lobby) GetRoomUsers() []*Session{
  * @author Justin Lewis
 *******************************/
 func (l *Lobby) MessagePlayers(message string){
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	for _, user := range l.users{
 		user.SendMessage(message)
 	}
