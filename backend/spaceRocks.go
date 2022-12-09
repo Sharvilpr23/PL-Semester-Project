@@ -10,9 +10,17 @@ import (
 
 var SPACE_ROCKS_GAME_ID = 4
 
+var ObjectId = 1
+
+func generateObjectId () int {
+	_id := ObjectId
+	ObjectId ++
+	return _id
+}
+
 type vector2d struct {
-	X: int
-	Y: int
+	X int
+	Y int
 }
 
 // yes ships are going to have circle hit boxes, don't @ me
@@ -113,13 +121,13 @@ func (game *SpaceRocks) newShip() *Ship{
 
 	testShip := Ship{
 		spaceObject: spaceObject{
-			Position: {
-
+			Position: vector2d{
 				X: spawnX, 
 				Y: spawnY, 
-			}
-				Radius: shipRadius,
-			Velocity: {
+			},
+			Radius: shipRadius,
+			ObjectId: generateObjectId(),
+			Velocity: vector2d{
 				X: 0,
 				Y: 0,
 			}, 
@@ -195,8 +203,8 @@ func (game *SpaceRocks) physicsLoop() {
 	for _, projectile := range game.Projectiles {
 		dX := projectile.spaceObject.Velocity.X
 		dY := projectile.spaceObject.Velocity.X
-		projectile.spaceObject.X += dX
-		projectile.spaceObject.Y += dY
+		projectile.spaceObject.Position.X += dX
+		projectile.spaceObject.Position.Y += dY
 	}
 
 	// for _, player := range game.Players {
@@ -236,12 +244,13 @@ func makeSpaceRocks(lobby *Lobby) *SpaceRocks{
 	for i := 1; i < numberRocks; i++ {
 		newRock := Rock{
 			spaceObject: spaceObject{
-				Position: {
+				Position: vector2d{
 					X: rand.Intn(gameWidth), 
 					Y: rand.Intn(gameHeight), 
 				},
 					Radius: rand.Intn(4),
-				Velocity: {
+					ObjectId: generateObjectId(),
+				Velocity: vector2d{
 					X: rand.Intn(maxRockVelocity) - (maxRockVelocity / 2), 
 					Y: rand.Intn(maxRockVelocity) - (maxRockVelocity / 2), 
 				},
