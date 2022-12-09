@@ -13,6 +13,9 @@ type Session struct {
 	connection *websocket.Conn
 }
 
+/*******************************
+ * @author Justin Lewis
+*******************************/
 func (s *Session) SendMessage(str string) error{
 	err := s.connection.WriteMessage(websocket.TextMessage, []byte(str))
 	return err
@@ -22,6 +25,9 @@ func (s *Session) SetLobby(lobby *Lobby) {
 	s.lobby = lobby
 }
 
+/*******************************
+ * @author Justin Lewis
+*******************************/
 func (s *Session) SendJSON(v interface{}) error{
 	err := s.connection.WriteJSON(v);
 	return err
@@ -41,6 +47,9 @@ type UserMessage struct {
 	GameData string
 }
 
+/*******************************
+ * @author Justin Lewis
+*******************************/
 func (s *Session) reader(server *Server){
     for { // Listen for messages
         messageType, p, err := s.connection.ReadMessage()
@@ -76,6 +85,7 @@ func (s *Session) reader(server *Server){
 			if(s.lobby != nil && s.lobby.GetGameId() != data.GameId){ // changing games... or potentially just adding a new one but it should be safe regardless
 				s.lobby.RemovePlayer(s)
 			}
+			server.removeFromLobby(s)
 			log.Println("Joining game")
 			server.JoinGame(s, data.GameId)
 		}
@@ -90,6 +100,9 @@ func (s *Session) reader(server *Server){
 
 var nextSessionId = 1
 
+/*******************************
+ * @author Justin Lewis
+*******************************/
 func generateSessionId() int {
 	sid := nextSessionId
 	nextSessionId++
@@ -100,6 +113,9 @@ type SessionStartMessage struct {
 	YourId int
 }
 
+/*******************************
+ * @author Justin Lewis
+*******************************/
 func startSession(conn *websocket.Conn) *Session{
 	s := &(Session{Id: generateSessionId(), connection: conn, UserName: "Anonymous" })
 	m := SessionStartMessage{YourId: s.Id}
