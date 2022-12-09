@@ -19,8 +19,8 @@ func generateObjectId () int {
 }
 
 type vector2d struct {
-	X int
-	Y int
+	X float64
+	Y float64
 }
 
 // yes ships are going to have circle hit boxes, don't @ me
@@ -31,12 +31,13 @@ type spaceObject struct {
 	ObjectId int
 }
 
-func (obj *spaceObject) getInfo() (int, int, int ){
+func (obj *spaceObject) getInfo() (float64, float64, int ){
 	return obj.Position.X, obj.Position.Y, obj.Radius
 }
 
 type Rock struct {
 	spaceObject
+	Points []vector2d
 }
 
 type Ship struct {
@@ -83,14 +84,14 @@ func (game *SpaceRocks) newShip() *Ship{
 	// O(n), where n is length of ships array
 	for _, player := range game.Players { // count num ships in each quadrant
 		ship := player.PlayerShip
-		if ship.Position.X <= halfX {
-			if ship.Position.Y > halfY {
+		if int(math.Floor(ship.Position.X)) <= halfX {
+			if int(math.Floor(ship.Position.Y)) > halfY {
 				tl += 1
 			} else {
 				bl += 1
 			}
 		} else {
-			if ship.Position.Y > halfY {
+			if int( math.Floor(ship.Position.Y)) > halfY {
 				tr += 1
 			} else {
 				br += 1
@@ -122,22 +123,22 @@ func (game *SpaceRocks) newShip() *Ship{
 	testShip := Ship{
 		spaceObject: spaceObject{
 			Position: vector2d{
-				X: spawnX, 
-				Y: spawnY, 
+				X: float64(spawnX), 
+				Y: float64(spawnY), 
 			},
 			Radius: shipRadius,
 			ObjectId: generateObjectId(),
 			Velocity: vector2d{
-				X: 0,
-				Y: 0,
+				X: .0,
+				Y: .0,
 			}, 
 			}, 
 		Angle: math.Pi/2,
 		ProjectileLimit: 3,
 	}
 	for game.checkAnyCollision(testShip.spaceObject) == true {
-		testShip.Position.X += 1
-		testShip.Position.Y += 1
+		testShip.Position.X += 1.0
+		testShip.Position.Y += 1.0
 	}
 
 	return &testShip
@@ -168,8 +169,9 @@ func (game *SpaceRocks) checkAnyCollision(obj spaceObject) bool {
 func checkCollision(obj1 spaceObject, obj2 spaceObject) bool {
 	obj1X, obj1Y, _ := obj1.getInfo()
 	obj2X, obj2Y, _ := obj2.getInfo()
-	distance := math.Sqrt(float64((obj1X - obj2X) * (obj1X - obj2X) + (obj1Y - obj2Y) * (obj1Y - obj2Y)))
-	if distance <= float64(obj1.Radius + obj2.Radius){
+	distance := (obj1X - obj2X) * (obj1X - obj2X) + (obj1Y - obj2Y) * (obj1Y - obj2Y)
+	// distance^2 <= val^2 is a faster approximation of distance < sqrt(val)
+	if int(distance * distance) <= (obj1.Radius + obj2.Radius) * (obj1.Radius + obj2.Radius){
 		return true
 	}
 	return false
@@ -187,25 +189,25 @@ type SpaceRocks struct {
 	MaxUsers int
 }
 
-func (game *SpaceRocks) physicsLoop() {
+func (game *SpaceRocks) physicsLoop(deltaTime float64) {
 	// move all autonomous objects according to their velocities and angles
 	// check for collisions. 
 	// rock colliding with rock can just delete rock for now
 	// player colliding with anything should be disastrous (for that player)
-	for game.live {
-	for _, rock := range game.Rocks {
-		dX := rock.spaceObject.Velocity.X
-		dY := rock.spaceObject.Velocity.Y
-		rock.spaceObject.Position.X += dX
-		rock.spaceObject.Position.Y += dY
-	}
+for game.live {
+	// for _, rock := range game.Rocks {
+	// 	dX := rock.spaceObject.Velocity.X * deltaTime
+	// 	dY := rock.spaceObject.Velocity.Y * deltaTime
+	// 	rock.spaceObject.Position.X += dX
+	// 	rock.spaceObject.Position.Y += dY
+	// }
 
-	for _, projectile := range game.Projectiles {
-		dX := projectile.spaceObject.Velocity.X
-		dY := projectile.spaceObject.Velocity.X
-		projectile.spaceObject.Position.X += dX
-		projectile.spaceObject.Position.Y += dY
-	}
+	// for _, projectile := range game.Projectiles {
+	// 	dX := projectile.spaceObject.Velocity.X * deltaTime
+	// 	dY := projectile.spaceObject.Velocity.X * deltaTime
+	// 	projectile.spaceObject.Position.X += dX
+	// 	projectile.spaceObject.Position.Y += dY
+	// }
 
 	// for _, player := range game.Players {
 	// 	if game.checkAnyCollision(player.PlayerShip.spaceObject) == true {
@@ -221,12 +223,30 @@ func (game *SpaceRocks) physicsLoop() {
 	if game.live {
 		game.lobby.MessagePlayers(string(out))
 	}
-	time.Sleep(time.Second)
+	if game.live {
+		time.Sleep(time.Second) // roughly 60fps
+		game.physicsLoop(1000)
 	}
+}
 }
 
 func (r *SpaceRocks) getMaxUsers() int {
 	return r.MaxUsers
+}
+
+func generateRockPoints(r int) []vector2d {
+	numPoints := rand.Intn(5) + 15 // 15 to 20 points
+	interval := 2 * math.Pi
+	stepSize := float64(interval) / float64(numPoints)
+	points := []vector2d{}
+	for angle := 0.0; angle < interval; angle += stepSize {
+		rOffset := float64(rand.Intn(r))/3.0 // edges will by wobbly by a factor of 1/3 radius
+		s, c := math.Sincos(angle)
+		dx := (float64(r) + rOffset) * c
+		dy := (float64(r) + rOffset) * s
+		points = append(points, vector2d{X: dx, Y: dy})
+	}
+	return points
 }
 
 /*******************************
@@ -237,29 +257,34 @@ func makeSpaceRocks(lobby *Lobby) *SpaceRocks{
 	var gameWidth = 160
 	var gameHeight = 90
 	var numberRocks = 50
-	var maxRockVelocity = 5
+	var maxRockVelocity = 50
 	room := SpaceRocks{lobby: lobby, MaxUsers: maxUsers, GameWidth: gameWidth, GameHeight: gameHeight, live: true}
 
 	// GENERATE ROCKS
 	for i := 1; i < numberRocks; i++ {
+		x := float64(rand.Intn(gameWidth))
+		y := float64(rand.Intn(gameHeight))
+		r := rand.Intn(4) + 3
+		pts := generateRockPoints(r)
 		newRock := Rock{
+					Points: pts,
 			spaceObject: spaceObject{
 				Position: vector2d{
-					X: rand.Intn(gameWidth), 
-					Y: rand.Intn(gameHeight), 
+					X: x,
+					Y: y, 
 				},
-					Radius: rand.Intn(4),
+					Radius: r,
 					ObjectId: generateObjectId(),
 				Velocity: vector2d{
-					X: rand.Intn(maxRockVelocity) - (maxRockVelocity / 2), 
-					Y: rand.Intn(maxRockVelocity) - (maxRockVelocity / 2), 
+					X: float64(rand.Intn(maxRockVelocity) - (maxRockVelocity / 2)), 
+					Y: float64(rand.Intn(maxRockVelocity) - (maxRockVelocity / 2)), 
 				},
 				}, 
 			}
 		room.Rocks = append(room.Rocks, &newRock)
 	}
 
-	go room.physicsLoop()
+	go room.physicsLoop(0)
 
 	return &room
 }
@@ -301,7 +326,10 @@ func (room *SpaceRocks) onUserMessage (user *Session, data string) {
 	for _, player := range room.Players {
 		if user.Id == player.Uid {
 			// message came from them
-			fmt.Println(data) // JSON.Unmarshall(data)
+			var playerData Player
+			_ = json.Unmarshal([]byte(data), &playerData)
+			fmt.Println(playerData) // JSON.Unmarshall(data)
+			player.PlayerShip = playerData.PlayerShip
 		}
 	}
 	// message := newMessage(user.GetUserName(), user.GetUserId(), data)

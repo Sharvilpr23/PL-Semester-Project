@@ -54,6 +54,7 @@ func (s *Server) removeFromLobby(session *Session){
 		if lobby.IsEmpty() { // If lobby now empty, remove it
 			s.lobbies[i] = s.lobbies[len(s.lobbies) - 1]
 			s.lobbies = s.lobbies[:len(s.lobbies) - 1]
+			log.Println("Lobby empty, removing")
 		}
 	}
 }
@@ -63,6 +64,7 @@ func (s *Server) removeFromLobby(session *Session){
 *******************************/
 func (s *Server) removeSession(session *Session){
 	s.removeFromLobby(session)
+	log.Println("Removing player " + session.GetUserName() + " from lobby")
 
 	for i, element := range s.Sessions {
 		if element.Id == session.Id {

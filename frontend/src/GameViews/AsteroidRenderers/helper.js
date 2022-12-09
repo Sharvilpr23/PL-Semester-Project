@@ -1,17 +1,26 @@
+import { isNotNilOrEmpty } from "ramda-adjunct";
 import { useCallback, useEffect, useRef } from "react";
 
-export const drawPoints = (context, offset, points) => {
+export const drawPoints = (context, offset, points, drawScalar) => {
   context.fillStyle = "#FFF";
   context.beginPath();
-  context.moveTo(offset.X + points[0][0], offset.Y + points[0][1]);
-  points.forEach((point) => {
-    context.lineTo(offset.X + point[0], offset.Y + point[1]);
-  });
-  context.lineTo(
-    // add in last line
-    offset.X + points[0][0],
-    offset.Y + points[0][1]
-  );
+  if (isNotNilOrEmpty(points)) {
+    context.moveTo(
+      offset.X * drawScalar + points[0][0] * drawScalar,
+      offset.Y * drawScalar + points[0][1] * drawScalar
+    );
+    points.forEach((point) => {
+      context.lineTo(
+        offset.X * drawScalar + point[0] * drawScalar,
+        offset.Y * drawScalar + point[1] * drawScalar
+      );
+    });
+    context.lineTo(
+      // add in last line
+      offset.X * drawScalar + points[0][0] * drawScalar,
+      offset.Y * drawScalar + points[0][1] * drawScalar
+    );
+  }
   context.strokeStyle = "#FFF";
   context.stroke();
 };

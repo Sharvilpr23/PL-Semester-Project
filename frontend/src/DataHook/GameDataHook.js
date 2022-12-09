@@ -22,7 +22,6 @@ export const useGameData = (endpoint) => {
     }
 
     webSocket.current.onmessage = ({ data }) => {
-      console.log("data", String(data));
       // If JSON string, parse into object, otherwise leave it as string
       try {
         data = JSON.parse(data);

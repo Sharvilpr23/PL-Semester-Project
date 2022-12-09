@@ -41,27 +41,27 @@ const getCurrentPlayer = (players, playerId) => {
 };
 
 const Asteroids = (props) => {
-  const { data, isOpen, sendData, clientId } = useConnectionContext();
+  const { isOpen, data, sendData, clientId } = useConnectionContext();
   const canvasRef = useRef(null);
   const [context, setContext] = useState();
-  const [asteroids, setAsteroids] = useState([]);
+  // const [asteroids, setAsteroids] = useState([]);
   const [projectiles, setProjectiles] = useState([]);
   const [lastShot, setLastShot] = useState(0);
   const [players, setPlayers] = useState([
-    {
-      // test player ship
-      PlayerShip: {
-        Position: {
-          X: 5,
-          Y: 5,
-        },
-        Radius: 1,
-        Angle: (-7 * Math.PI) / 4,
-        Velocity: { X: 0, Y: 0 },
-        ProjectileLimit: 3,
-      },
-      Uid: -1,
-    },
+    // {
+    //   // test player ship
+    //   PlayerShip: {
+    //     Position: {
+    //       X: 5,
+    //       Y: 5,
+    //     },
+    //     Radius: 1,
+    //     Angle: (-7 * Math.PI) / 4,
+    //     Velocity: { X: 0, Y: 0 },
+    //     ProjectileLimit: 3,
+    //   },
+    //   Uid: -1,
+    // },
   ]);
   const [angularVelocity, setAngularVelocity] = useState(0);
   const [playerVelocity, setPlayerVelocity] = useState(0);
@@ -79,32 +79,39 @@ const Asteroids = (props) => {
     if (isNotNilOrEmpty(data?.Players)) {
       setPlayers(data?.Players);
     }
-    if (isNotNilOrEmpty(data?.Rocks)) {
-      setAsteroids(
-        (data?.Rocks || []).map((rock) => {
-          return { points: generateAsteroidPoints(rock, drawScalar), ...rock };
-        })
-      );
-    } else {
-      setAsteroids(
-        [
-          generateAsteroid(
-            Math.floor(Math.random() * dimensions[0]),
-            Math.floor(Math.random() * dimensions[1])
-          ),
-          generateAsteroid(
-            Math.floor(Math.random() * dimensions[0]),
-            Math.floor(Math.random() * dimensions[1])
-          ),
-        ].map((rock) => {
-          return { points: generateAsteroidPoints(rock, drawScalar), ...rock };
-        })
-      );
-    }
+    // if (isNotNilOrEmpty(data?.Rocks)) {
+    //   setAsteroids(
+    //     (data?.Rocks || []).map((rock) => {
+    //       return { points: generateAsteroidPoints(rock, drawScalar), ...rock };
+    //     })
+    //   );
+    // } else {
+    //   setAsteroids(
+    //     [
+    //       generateAsteroid(
+    //         Math.floor(Math.random() * dimensions[0]),
+    //         Math.floor(Math.random() * dimensions[1])
+    //       ),
+    //       generateAsteroid(
+    //         Math.floor(Math.random() * dimensions[0]),
+    //         Math.floor(Math.random() * dimensions[1])
+    //       ),
+    //     ].map((rock) => {
+    //       return { points: generateAsteroidPoints(rock, drawScalar), ...rock };
+    //     })
+    //   );
+    // }
     if (isNotNilOrEmpty(data?.GameWidth) && isNotNilOrEmpty(data?.GameHeight)) {
       setDimensions([data.GameWidth, data.GameHeight]);
     }
-  }, [data, setPlayers, setAsteroids, setDimensions, dimensions]);
+  }, [
+    setPlayers,
+    setDimensions,
+    dimensions,
+    data.GameHeight,
+    data.GameWidth,
+    data?.Players,
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -139,17 +146,18 @@ const Asteroids = (props) => {
           drawProjectile(context, projectile, drawScalar)
         );
       }
-      if (isNotNilOrEmpty(asteroids)) {
-        asteroids.forEach((asteroid) =>
+      if (isNotNilOrEmpty(data?.Rocks)) {
+        data?.Rocks.forEach((asteroid) => {
           drawPoints(
             context,
             {
-              X: asteroid?.Position?.X * drawScalar,
-              Y: asteroid?.Position?.Y * drawScalar,
+              X: asteroid?.Position?.X,
+              Y: asteroid?.Position?.Y,
             },
-            asteroid?.points || []
-          )
-        );
+            asteroid?.points || [],
+            drawScalar
+          );
+        });
       }
 
       if (isNotNilOrEmpty(players)) {
@@ -171,84 +179,92 @@ const Asteroids = (props) => {
       }
     }
     // PHYSICS LOOP
-    players.forEach(({ PlayerShip }) => {
-      dpDt(PlayerShip, deltaTime);
-      PlayerShip.Angle += (angularVelocity * deltaTime) / (Math.PI * 2); // maybe can do 1
+    players.forEach((player) => {
+      dpDt(player.PlayerShip, deltaTime);
+      player.PlayerShip.Angle += (angularVelocity * deltaTime) / (Math.PI * 2); // maybe can do 1
       // turn every second? Depends on fps. Should multiply by some kind of delta
       // time variable, like back when I did unity
-      borderMove(PlayerShip, dimensions);
-      applyAcceleration(PlayerShip, playerVelocity);
-    });
-    asteroids.forEach((rock) => {
-      dpDt(rock, deltaTime);
-      borderMove(rock, dimensions);
+      borderMove(player.PlayerShip, dimensions);
+      applyAcceleration(player.PlayerShip, playerVelocity);
+      sendData(
+        JSON.stringify({
+          Name: "",
+          GameId: 0,
+          GameData: JSON.stringify(player),
+        })
+      );
     });
 
-    const projectilesToDelete = [];
-    projectiles.forEach((projectile) => {
-      if (checkBorder(projectile, dimensions)) {
-        projectilesToDelete.push(projectile.ObjectId);
-      } else {
-        dpDt(projectile, deltaTime);
-        const collision = checkCollisions(
-          projectile,
-          projectiles,
-          asteroids,
-          players,
-          ["projectiles"],
-          [projectile.Owner]
-        );
-        if (isObject(collision)) {
-          // delete this projectile and what it hit
-          console.log("COLLISION");
-          projectilesToDelete.push(projectile.ObjectId);
-          if (collision?.type === "rock") {
-            setAsteroids((current) => {
-              const next = current.filter(
-                (rock) =>
-                  rock?.ObjectId !== collision?.ObjectId && isObject(rock)
-              ); // remove collided rock
-              // push two rocks of half size, unless size < 2 or so
-              if (collision.Radius <= 2) {
-                return next;
-              }
-              const newRocks = [
-                generateAsteroid(
-                  collision.Position.X,
-                  collision.Position.Y,
-                  collision.Radius / 2
-                ),
-                generateAsteroid(
-                  collision.Position.X,
-                  collision.Position.Y,
-                  collision.Radius / 2
-                ),
-              ].map((rock) => {
-                return {
-                  points: generateAsteroidPoints(rock, drawScalar),
-                  ...rock,
-                };
-              });
-              next.push(newRocks[0]);
-              next.push(newRocks[1]);
-              return next;
-            });
-          }
-        }
-      }
-    });
-    setProjectiles((current) => {
-      const res = current.filter((projectile) => {
-        const marked = projectilesToDelete.includes(projectile.ObjectId);
-        if (marked)
-          getCurrentPlayer(
-            players,
-            projectile.Owner
-          ).PlayerShip.ProjectileLimit += 1;
-        return !marked; // per filter
-      });
-      return res;
-    });
+    // data?.rocks?.forEach((rock) => {
+    //   dpDt(rock, deltaTime);
+    //   borderMove(rock, dimensions);
+    // });
+
+    // const projectilesToDelete = [];
+    // projectiles.forEach((projectile) => {
+    //   if (checkBorder(projectile, dimensions)) {
+    //     projectilesToDelete.push(projectile.ObjectId);
+    //   } else {
+    //     dpDt(projectile, deltaTime);
+    //     const collision = checkCollisions(
+    //       projectile,
+    //       projectiles,
+    //       asteroids,
+    //       players,
+    //       ["projectiles"],
+    //       [projectile.Owner]
+    //     );
+    //     if (isObject(collision)) {
+    //       // delete this projectile and what it hit
+    //       console.log("COLLISION");
+    //       projectilesToDelete.push(projectile.ObjectId);
+    //       if (collision?.type === "rock") {
+    //         setAsteroids((current) => {
+    //           const next = current.filter(
+    //             (rock) =>
+    //               rock?.ObjectId !== collision?.ObjectId && isObject(rock)
+    //           ); // remove collided rock
+    //           // push two rocks of half size, unless size < 2 or so
+    //           if (collision.Radius <= 2) {
+    //             return next;
+    //           }
+    //           const newRocks = [
+    //             generateAsteroid(
+    //               collision.Position.X,
+    //               collision.Position.Y,
+    //               collision.Radius / 2
+    //             ),
+    //             generateAsteroid(
+    //               collision.Position.X,
+    //               collision.Position.Y,
+    //               collision.Radius / 2
+    //             ),
+    //           ].map((rock) => {
+    //             return {
+    //               points: generateAsteroidPoints(rock, drawScalar),
+    //               ...rock,
+    //             };
+    //           });
+    //           next.push(newRocks[0]);
+    //           next.push(newRocks[1]);
+    //           return next;
+    //         });
+    //       }
+    //     }
+    //   }
+    // });
+    // setProjectiles((current) => {
+    //   const res = current.filter((projectile) => {
+    //     const marked = projectilesToDelete.includes(projectile.ObjectId);
+    //     if (marked)
+    //       getCurrentPlayer(
+    //         players,
+    //         projectile.Owner
+    //       ).PlayerShip.ProjectileLimit += 1;
+    //     return !marked; // per filter
+    //   });
+    //   return res;
+    // });
   });
 
   const keyUp = ({ key }) => {

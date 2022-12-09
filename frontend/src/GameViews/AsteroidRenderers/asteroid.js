@@ -12,7 +12,7 @@ export const generateAsteroid = (startX, startY, radius = 8) => {
 };
 
 export const generateAsteroidPoints = (asteroid, drawScalar) => {
-  const numPoints = Math.floor(Math.random() * 10) + 10; // 5 - 10 points
+  const numPoints = Math.floor(Math.random() * 5) + 15; // 5 to 20
   const interval = 2 * Math.PI;
   const stepSize = interval / numPoints;
   const points = [];
