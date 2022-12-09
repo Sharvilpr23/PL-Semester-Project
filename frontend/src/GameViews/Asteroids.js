@@ -16,6 +16,7 @@ import {
   checkCollisions,
   dpDt,
   drawPoints,
+  useAnimationFrame,
 } from "./AsteroidRenderers/helper";
 import { applyAcceleration, drawShip } from "./AsteroidRenderers/ship";
 
@@ -118,151 +119,137 @@ const Asteroids = (props) => {
     );
   }, [setContext]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isNotNil(canvasRef) && isNotNil(context)) {
-        canvasRef.current.width = dimensions[0] * drawScalar;
-        canvasRef.current.height = dimensions[1] * drawScalar;
-        context.fillStyle = "#000000";
-        context.fillRect(
-          0,
-          0,
-          dimensions[0] * drawScalar,
-          dimensions[1] * drawScalar
+  useAnimationFrame((deltaTime) => {
+    deltaTime = (deltaTime / 1000) * 24; // velocities were developed assuming ~24 fps, so after implementing deltaTime this is what feels normal
+
+    // const deltaTime = 1;
+    if (isNotNil(canvasRef) && isNotNil(context)) {
+      canvasRef.current.width = dimensions[0] * drawScalar;
+      canvasRef.current.height = dimensions[1] * drawScalar;
+      context.fillStyle = "#000000";
+      context.fillRect(
+        0,
+        0,
+        dimensions[0] * drawScalar,
+        dimensions[1] * drawScalar
+      );
+
+      if (isNotNilOrEmpty(projectiles)) {
+        projectiles.forEach((projectile) =>
+          drawProjectile(context, projectile, drawScalar)
         );
-
-        if (isNotNilOrEmpty(projectiles)) {
-          projectiles.forEach((projectile) =>
-            drawProjectile(context, projectile, drawScalar)
-          );
-        }
-        if (isNotNilOrEmpty(asteroids)) {
-          asteroids.forEach((asteroid) =>
-            drawPoints(
-              context,
-              {
-                X: asteroid?.Position?.X * drawScalar,
-                Y: asteroid?.Position?.Y * drawScalar,
-              },
-              asteroid?.points || []
-            )
-          );
-        }
-
-        if (isNotNilOrEmpty(players)) {
-          players.forEach((player) => {
-            var color = "#F00";
-            if (player.Uid === clientId) {
-              color = "#0FF";
-            }
-            drawShip(
-              context,
-              player?.PlayerShip?.Position?.X * drawScalar,
-              player?.PlayerShip?.Position?.Y * drawScalar,
-              player?.PlayerShip?.Radius * drawScalar,
-              color,
-              color,
-              player?.PlayerShip?.Angle
-            );
-          });
-        }
       }
-      // PHYSICS LOOP
-      players.forEach(({ PlayerShip }) => {
-        dpDt(PlayerShip);
-        PlayerShip.Angle += angularVelocity / (Math.PI * 2); // maybe can do 1
-        // turn every second? Depends on fps. Should multiply by some kind of delta
-        // time variable, like back when I did unity
-        borderMove(PlayerShip, dimensions);
-        applyAcceleration(PlayerShip, playerVelocity);
-      });
-      asteroids.forEach((rock) => {
-        const dX = rock.Velocity.X;
-        const dY = rock.Velocity.Y;
-        rock.Position.X += dX;
-        rock.Position.Y += dY;
-        borderMove(rock, dimensions);
-      });
+      if (isNotNilOrEmpty(asteroids)) {
+        asteroids.forEach((asteroid) =>
+          drawPoints(
+            context,
+            {
+              X: asteroid?.Position?.X * drawScalar,
+              Y: asteroid?.Position?.Y * drawScalar,
+            },
+            asteroid?.points || []
+          )
+        );
+      }
 
-      const projectilesToDelete = [];
-      projectiles.forEach((projectile) => {
-        if (checkBorder(projectile, dimensions)) {
-          projectilesToDelete.push(projectile.ObjectId);
-        } else {
-          dpDt(projectile);
-          const collision = checkCollisions(
-            projectile,
-            projectiles,
-            asteroids,
-            players,
-            ["projectiles"],
-            [projectile.Owner]
+      if (isNotNilOrEmpty(players)) {
+        players.forEach((player) => {
+          var color = "#F00";
+          if (player.Uid === clientId) {
+            color = "#0FF";
+          }
+          drawShip(
+            context,
+            player?.PlayerShip?.Position?.X * drawScalar,
+            player?.PlayerShip?.Position?.Y * drawScalar,
+            player?.PlayerShip?.Radius * drawScalar,
+            color,
+            color,
+            player?.PlayerShip?.Angle
           );
-          if (isObject(collision)) {
-            // delete this projectile and what it hit
-            console.log("COLLISION");
-            projectilesToDelete.push(projectile.ObjectId);
-            if (collision?.type === "rock") {
-              setAsteroids((current) => {
-                const next = current.filter(
-                  (rock) =>
-                    rock?.ObjectId !== collision?.ObjectId && isObject(rock)
-                ); // remove collided rock
-                // push two rocks of half size, unless size < 2 or so
-                if (collision.Radius <= 2) {
-                  return next;
-                }
-                const newRocks = [
-                  generateAsteroid(
-                    collision.Position.X,
-                    collision.Position.Y,
-                    collision.Radius / 2
-                  ),
-                  generateAsteroid(
-                    collision.Position.X,
-                    collision.Position.Y,
-                    collision.Radius / 2
-                  ),
-                ].map((rock) => {
-                  return {
-                    points: generateAsteroidPoints(rock, drawScalar),
-                    ...rock,
-                  };
-                });
-                next.push(newRocks[0]);
-                next.push(newRocks[1]);
+        });
+      }
+    }
+    // PHYSICS LOOP
+    players.forEach(({ PlayerShip }) => {
+      dpDt(PlayerShip, deltaTime);
+      PlayerShip.Angle += (angularVelocity * deltaTime) / (Math.PI * 2); // maybe can do 1
+      // turn every second? Depends on fps. Should multiply by some kind of delta
+      // time variable, like back when I did unity
+      borderMove(PlayerShip, dimensions);
+      applyAcceleration(PlayerShip, playerVelocity);
+    });
+    asteroids.forEach((rock) => {
+      dpDt(rock, deltaTime);
+      borderMove(rock, dimensions);
+    });
+
+    const projectilesToDelete = [];
+    projectiles.forEach((projectile) => {
+      if (checkBorder(projectile, dimensions)) {
+        projectilesToDelete.push(projectile.ObjectId);
+      } else {
+        dpDt(projectile, deltaTime);
+        const collision = checkCollisions(
+          projectile,
+          projectiles,
+          asteroids,
+          players,
+          ["projectiles"],
+          [projectile.Owner]
+        );
+        if (isObject(collision)) {
+          // delete this projectile and what it hit
+          console.log("COLLISION");
+          projectilesToDelete.push(projectile.ObjectId);
+          if (collision?.type === "rock") {
+            setAsteroids((current) => {
+              const next = current.filter(
+                (rock) =>
+                  rock?.ObjectId !== collision?.ObjectId && isObject(rock)
+              ); // remove collided rock
+              // push two rocks of half size, unless size < 2 or so
+              if (collision.Radius <= 2) {
                 return next;
+              }
+              const newRocks = [
+                generateAsteroid(
+                  collision.Position.X,
+                  collision.Position.Y,
+                  collision.Radius / 2
+                ),
+                generateAsteroid(
+                  collision.Position.X,
+                  collision.Position.Y,
+                  collision.Radius / 2
+                ),
+              ].map((rock) => {
+                return {
+                  points: generateAsteroidPoints(rock, drawScalar),
+                  ...rock,
+                };
               });
-            }
+              next.push(newRocks[0]);
+              next.push(newRocks[1]);
+              return next;
+            });
           }
         }
+      }
+    });
+    setProjectiles((current) => {
+      const res = current.filter((projectile) => {
+        const marked = projectilesToDelete.includes(projectile.ObjectId);
+        if (marked)
+          getCurrentPlayer(
+            players,
+            projectile.Owner
+          ).PlayerShip.ProjectileLimit += 1;
+        return !marked; // per filter
       });
-      setProjectiles((current) => {
-        const res = current.filter((projectile) => {
-          const marked = projectilesToDelete.includes(projectile.ObjectId);
-          if (marked)
-            getCurrentPlayer(
-              players,
-              projectile.Owner
-            ).PlayerShip.ProjectileLimit += 1;
-          return !marked; // per filter
-        });
-        return res;
-      });
-    }, 42); // slightly slower than 24 fps
-
-    return () => clearInterval(interval);
-  }, [
-    canvasRef,
-    context,
-    asteroids,
-    dimensions,
-    players,
-    clientId,
-    angularVelocity,
-    playerVelocity,
-    projectiles,
-  ]);
+      return res;
+    });
+  });
 
   const keyUp = ({ key }) => {
     if (key === "a" && angularVelocity === -1) {

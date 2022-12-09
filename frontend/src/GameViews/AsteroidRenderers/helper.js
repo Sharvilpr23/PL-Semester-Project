@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useRef } from "react";
+
 export const drawPoints = (context, offset, points) => {
   context.fillStyle = "#FFF";
   context.beginPath();
@@ -17,15 +19,15 @@ export const drawPoints = (context, offset, points) => {
 const checkCollision = (obj1, obj2) => {
   const { X: obj1X, Y: obj1Y } = obj1.Position;
   const { X: obj2X, Y: obj2Y } = obj2.Position;
-  const distance = Math.sqrt(
-    (obj1X - obj2X) * (obj1X - obj2X) + (obj1Y - obj2Y) * (obj1Y - obj2Y)
-  );
-  return distance <= obj1.Radius + obj2.Radius;
+  const distance =
+    (obj1X - obj2X) * (obj1X - obj2X) + (obj1Y - obj2Y) * (obj1Y - obj2Y);
+  const twoRad = obj1.Radius + obj2.Radius;
+  return distance <= twoRad * twoRad; // distance^2 < twoRad^2 === distance < twoRad
 };
 
-export const dpDt = (object) => {
-  object.Position.X += object.Velocity.X;
-  object.Position.Y += object.Velocity.Y;
+export const dpDt = (object, deltaTime) => {
+  object.Position.X += object.Velocity.X * deltaTime;
+  object.Position.Y += object.Velocity.Y * deltaTime;
 };
 
 export const checkBorder = (object, dimensions) => {
@@ -81,4 +83,29 @@ export const checkCollisions = (
     });
   }
   return hits[0];
+};
+
+// https://css-tricks.com/using-requestanimationframe-with-react-hooks/
+export const useAnimationFrame = (callback) => {
+  // Use useRef for mutable variables that we want to persist
+  // without triggering a re-render on their change
+  const requestRef = useRef();
+  const previousTimeRef = useRef();
+
+  const animate = useCallback(
+    (time) => {
+      if (previousTimeRef.current !== undefined) {
+        const deltaTime = time - previousTimeRef.current;
+        callback(deltaTime);
+      }
+      previousTimeRef.current = time;
+      requestRef.current = requestAnimationFrame(animate);
+    },
+    [callback]
+  );
+
+  useEffect(() => {
+    requestRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestRef.current);
+  }, [animate]); // Make sure the effect runs only once
 };
