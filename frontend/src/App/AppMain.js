@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import ExampleView from "../GameViews/ExampleView";
 import ChatRoom from "../GameViews/ChatRoom";
 import Home from "../GameViews/Home";
+import Asteroids from "../GameViews/Asteroids";
 
 //*****************************************************************************
 // Interface
@@ -33,6 +34,7 @@ const AppMain = ({ className }) => {
         <Route exact path="/first" element={<ChatRoom />} />
         <Route exact path="/second" element={<ExampleView />} />
         <Route exact path="/third" element={<ExampleView />} />
+        <Route exact path="/asteroids" element={<Asteroids />} />
       </Routes>
     </div>
   );

@@ -35,6 +35,7 @@ const GameNav = ({ className }) => {
     ["Chat Room", "/first"],
     ["Second Game", "/second"],
     ["Third Game", "/third"],
+    ["Space rocks", "/asteroids"],
   ];
 
   return (
