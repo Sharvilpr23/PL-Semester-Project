@@ -45,6 +45,7 @@ const Asteroids = (props) => {
   const [context, setContext] = useState();
   const [asteroids, setAsteroids] = useState([]);
   const [projectiles, setProjectiles] = useState([]);
+  const [lastShot, setLastShot] = useState(0);
   const [players, setPlayers] = useState([
     {
       // test player ship
@@ -263,8 +264,6 @@ const Asteroids = (props) => {
     projectiles,
   ]);
 
-  useEffect(() => {}, [players]);
-
   const keyUp = ({ key }) => {
     if (key === "a" && angularVelocity === -1) {
       setAngularVelocity(0);
@@ -291,7 +290,10 @@ const Asteroids = (props) => {
       setPlayerVelocity(-1);
     } else if (key === " ") {
       const thePlayer = getCurrentPlayer(players, clientId);
-      if (isNotNil(thePlayer) && thePlayer?.PlayerShip?.ProjectileLimit > 0) {
+      const coolDown = 0.5;
+      const now = new Date();
+      if (isNotNil(thePlayer) && (now - lastShot) / 1000 > coolDown) {
+        setLastShot(new Date());
         thePlayer.PlayerShip.ProjectileLimit -= 1;
         setProjectiles((current) => {
           current.push(
