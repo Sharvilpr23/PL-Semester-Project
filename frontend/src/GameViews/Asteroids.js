@@ -200,7 +200,7 @@ const Asteroids = (props) => {
           if (isObject(collision)) {
             // delete this projectile and what it hit
             console.log("COLLISION");
-            projectilesToDelete.push(projectile);
+            projectilesToDelete.push(projectile.ObjectId);
             if (collision?.type === "rock") {
               setAsteroids((current) => {
                 const next = current.filter(
@@ -237,7 +237,7 @@ const Asteroids = (props) => {
         }
       });
       setProjectiles((current) => {
-        current.filter((projectile) => {
+        const res = current.filter((projectile) => {
           const marked = projectilesToDelete.includes(projectile.ObjectId);
           if (marked)
             getCurrentPlayer(
@@ -246,7 +246,7 @@ const Asteroids = (props) => {
             ).PlayerShip.ProjectileLimit += 1;
           return !marked; // per filter
         });
-        return current;
+        return res;
       });
     }, 42); // slightly slower than 24 fps
 
