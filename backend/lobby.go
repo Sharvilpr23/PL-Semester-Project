@@ -8,14 +8,14 @@ type OnUserCallback func(*Session)
 type OnUserCallbackWithString func(*Session, string)
 
 type Lobby struct {
-	gameId int
-	lobbyId int
-	maxUsers int
-	mutex sync.Mutex
-	sendRoom OnUserCallbackWithString
-	onUserJoin OnUserCallback
+	gameId      int
+	lobbyId     int
+	maxUsers    int
+	mutex       sync.Mutex
+	sendRoom    OnUserCallbackWithString
+	onUserJoin  OnUserCallback
 	onUserLeave OnUserCallback
-	users []*Session
+	users       []*Session
 }
 
 var LobbyId = 1
@@ -23,33 +23,34 @@ var LobbyId = 1
 /*******************************
  * @author Justin Lewis
 *******************************/
-func generateLobbyId () int {
+func generateLobbyId() int {
 	_id := LobbyId
-	LobbyId ++
+	LobbyId++
 	return _id
 }
 
 /*******************************
  * @author Justin Lewis
 *******************************/
-func NewLobby(gameId int) *Lobby{
+func NewLobby(gameId int) *Lobby {
 	l := Lobby{gameId: gameId, lobbyId: generateLobbyId()}
 	lobbyAddy := &l
 	var room GameInterface // interesting since there's no proper inheritence but every game will follow proper standards that I will need to write down
-	if gameId == CHATROOM_GAME_ID{
+	if gameId == CHATROOM_GAME_ID {
 		room = makeChatRoom(lobbyAddy)
 	}
-	if gameId == SPACE_ROCKS_GAME_ID {
-		room = makeSpaceRocks(lobbyAddy)
+
+	if gameId == ENCRYPTER_GAME_ID {
+		room = makeEncrypter(lobbyAddy)
 	}
 
-	lobbyAddy.sendRoom = func (player *Session, body string) {
+	lobbyAddy.sendRoom = func(player *Session, body string) {
 		room.onUserMessage(player, body)
 	}
-	lobbyAddy.onUserJoin = func (player *Session) {
+	lobbyAddy.onUserJoin = func(player *Session) {
 		room.onUserJoin(player)
 	}
-	lobbyAddy.onUserLeave = func (player *Session) {
+	lobbyAddy.onUserLeave = func(player *Session) {
 		room.onUserLeave(player)
 	}
 	l.maxUsers = room.getMaxUsers()
@@ -77,7 +78,7 @@ func (l *Lobby) IsEmpty() bool {
 /*******************************
  * @author Justin Lewis
 *******************************/
-func (l *Lobby) RemovePlayer(player *Session){
+func (l *Lobby) RemovePlayer(player *Session) {
 	// Player may not be in the list of players, since I am doing this in a rather lazy way
 	var toRemove int = -1
 	for i, user := range l.users {
@@ -85,9 +86,9 @@ func (l *Lobby) RemovePlayer(player *Session){
 			toRemove = i
 		}
 	}
-	if toRemove != -1{ // Standard remove index i from slice
-		l.users[toRemove] = l.users[len(l.users) - 1]
-		l.users = l.users[:len(l.users) - 1]
+	if toRemove != -1 { // Standard remove index i from slice
+		l.users[toRemove] = l.users[len(l.users)-1]
+		l.users = l.users[:len(l.users)-1]
 		l.onUserLeave(player)
 	}
 }
@@ -95,22 +96,22 @@ func (l *Lobby) RemovePlayer(player *Session){
 /*******************************
  * @author Justin Lewis
 *******************************/
-func (l *Lobby) AddPlayer(player *Session){
+func (l *Lobby) AddPlayer(player *Session) {
 	l.users = append(l.users, player)
 	l.onUserJoin(player)
 }
 
-func (l *Lobby) GetRoomUsers() []*Session{
+func (l *Lobby) GetRoomUsers() []*Session {
 	return l.users
 }
 
 /*******************************
  * @author Justin Lewis
 *******************************/
-func (l *Lobby) MessagePlayers(message string){
+func (l *Lobby) MessagePlayers(message string) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	for _, user := range l.users{
+	for _, user := range l.users {
 		user.SendMessage(message)
 	}
 }
